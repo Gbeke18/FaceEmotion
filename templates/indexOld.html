@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Facial Emotion Recognition</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background-color: #f2f2f2;
+      margin-top: 40px;
+    }
+    video, canvas {
+      border: 2px solid #333;
+      border-radius: 10px;
+      width: 320px;
+      height: 240px;
+    }
+    #controls {
+      margin-top: 20px;
+    }
+    button {
+      padding: 10px 15px;
+      margin: 5px;
+      font-size: 14px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    #result {
+      margin-top: 20px;
+      font-size: 18px;
+      color: #222;
+    }
+  </style>
+</head>
+<body>
+  <h2>Facial Emotion Recognition</h2>
+
+  <!-- Webcam Video Feed -->
+  <video id="video" autoplay></video>
+  <canvas id="canvas" style="display:none;"></canvas>
+
+  <div id="controls">
+    <button id="captureBtn">Capture Emotion</button>
+    <button id="stopBtn">Stop Camera</button>
+  </div>
+
+  <h3 id="result"></h3>
+
+  <!-- Fallback File Upload -->
+  <hr>
+  <p>Or upload an image file:</p>
+  <form id="uploadForm" enctype="multipart/form-data">
+    <input type="file" name="file" accept="image/*">
+    <button type="submit">Analyze Uploaded Image</button>
+  </form>
+
+  <script>
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const captureBtn = document.getElementById('captureBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const resultDiv = document.getElementById('result');
+    let stream;
+
+    // Access user webcam
+    async function startCamera() {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        video.srcObject = stream;
+      } catch (error) {
+        alert("Camera access denied or unavailable.");
+      }
+    }
+
+    // Stop webcam stream
+    function stopCamera() {
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
+    }
+
+    // Capture frame from webcam and send to backend
+    captureBtn.addEventListener('click', async () => {
+      const context = canvas.getContext('2d');
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg'));
+      const formData = new FormData();
+      formData.append('file', blob, 'snapshot.jpg');
+
+      resultDiv.innerHTML = "Analyzing emotion...";
+      const res = await fetch('/predict', { method: 'POST', body: formData });
+      const out = await res.json();
+      resultDiv.innerHTML = `Emotion: <b>${out.emotion}</b><br>${out.description}`;
+    });
+
+    // Stop camera when button clicked
+    stopBtn.addEventListener('click', stopCamera);
+
+    // Handle file upload (fallback)
+    const uploadForm = document.getElementById('uploadForm');
+    uploadForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const data = new FormData(uploadForm);
+      resultDiv.innerHTML = "Analyzing uploaded image...";
+      const res = await fetch('/predict', { method: 'POST', body: data });
+      const out = await res.json();
+      resultDiv.innerHTML = `Emotion: <b>${out.emotion}</b><br>${out.description}`;
+    });
+
+    // Start camera automatically
+    startCamera();
+  </script>
+</body>
+</html>
