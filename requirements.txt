@@ -3,3 +3,4 @@ torchvision
 pillow
 flask
 numpy
+gunicorn
