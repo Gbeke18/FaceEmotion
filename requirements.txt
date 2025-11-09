@@ -3,5 +3,3 @@ torchvision
 pillow
 flask
 numpy
-
-
